@@ -23,8 +23,8 @@ summary(bank_marketing_train_y)
 summary(bank_marketing_train_n)
 
 # データ数
-num_yes = 3796
-num_no = 29948
+num_yes = dim(bank_marketing_train_y)[1]
+num_no = dim(bank_marketing_train_n)[1]
 
 # ヒストグラム
 
