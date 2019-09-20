@@ -1,0 +1,257 @@
+---
+title: "Bank Marketing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 前準備（データ読み込み、ライブラリのインポート）
+
+```{r}
+
+
+library("psych")
+library("skimr")
+library("plotly")
+
+bank_marketing_train <- read.csv("../bank_marketing_train.csv")
+
+```
+
+# 1.ターゲットのペルソナを検討する
+
+```{r}
+# y=yes/noのデータを抽出
+bank_marketing_train_y <- bank_marketing_train[bank_marketing_train$y=="yes",]
+bank_marketing_train_n <- bank_marketing_train[bank_marketing_train$y=="no",]
+
+
+# データ数
+num_yes = dim(bank_marketing_train_y)[1]
+num_no = dim(bank_marketing_train_n)[1]
+
+# ヒストグラム（特徴が表れていそうなもの）
+
+# 年齢(age)
+pl_yes <- plot_ly(x = bank_marketing_train_y$age, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$age, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# => yesの方が、60以上が多い
+
+# 職業(job)
+pl_yes <- plot_ly(x = bank_marketing_train_y$job, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$job, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_y$job)/num_yes
+summary(bank_marketing_train_n$job)/num_no
+# => yesの方が、retired/studentが多く、blue-colorが少ない。特にretiredは3倍違いがでている
+
+# 最終学歴(education)
+pl_yes <- plot_ly(x = bank_marketing_train_y$education, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$education, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# => yesはuniversity.degreeが多い
+
+# 連絡デバイス(contact)
+pl_yes <- plot_ly(x = bank_marketing_train_y$contact, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$contact, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# => yesはcellularが多い
+
+# 以前のキャンペーン結果(campaign)
+pl_yes <- plot_ly(x = bank_marketing_train_y$poutcome, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$poutcome, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_y$poutcome)/num_yes
+summary(bank_marketing_train_n$poutcome)/num_no# => yesはsuccessが多い(全体の割合としては2割だが、noは0.1割くらいなのでyesとnoの差はある)
+
+# 以前のキャンペーンの接触回数(previous)
+pl_yes <- plot_ly(x = bank_marketing_train_y$previous, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$previous, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+summary(bank_marketing_train_y$previous)
+summary(bank_marketing_train_n$previous)
+# => yesは平均値が大きい(yes:0.48, no:0.13)しかし、この説明変数がどれだけ有効なのかは想像つかない
+
+```
+
+#
+
+### ロジスティック回帰で各説明変数を見る
+
+```{r}
+## ロジスティック回帰
+## 個人に紐づく、架電前に得られる説明変数のみ利用
+lr<-glm(y~age+job+marital+default+education+housing+
+          loan+contact+day_of_week+pdays+poutcome+previous,
+        data=bank_marketing_train, family="binomial")
+
+
+## step関数でAICを減らす
+lr2 <- step(lr)
+AIC(lr2)
+summary(lr2)
+# => 1回目の分析で特徴が出ていたもののうち、age, job, contact, previousは影響ありそう
+
+```
+
+### ペルソナの推定
+- Age:60以上
+- Job:retired
+
+### Job:retiredのペルソナを基本に、データを絞ってペルソナを限定していく
+```{r}
+# => Job:retiredの条件で、データを絞ってみてみる
+bank_marketing_train_job_retired <- bank_marketing_train[bank_marketing_train$job == "retired",]
+summary(bank_marketing_train_job_retired)
+
+
+# y=yes/noのデータを抽出してみる
+bank_marketing_train_job_retired_y <- bank_marketing_train_job_retired[bank_marketing_train_job_retired$y=="yes",]
+bank_marketing_train_job_retired_n <- bank_marketing_train_job_retired[bank_marketing_train_job_retired$y=="no",]
+summary(bank_marketing_train_job_retired_y)
+summary(bank_marketing_train_job_retired_n)
+
+# データ数
+num_retired_yes = dim(bank_marketing_train_job_retired_y)[1]
+num_retired_no = dim(bank_marketing_train_job_retired_n)[1]
+```
+
+### ヒストグラム
+```{r}
+# 年齢
+plot_ly(x = bank_marketing_train_job_retired_y$age, type="histogram")
+plot_ly(x = bank_marketing_train_job_retired_n$age, type="histogram")
+plot_ly(x = bank_marketing_train_job_retired$age, type="histogram", color = bank_marketing_train_job_retired$y)
+plot_ly(x = bank_marketing_train_job_retired$age, type="box", color = bank_marketing_train_job_retired$y)
+# => yesの方が、60以上が多い
+
+# 婚姻状況
+plot_ly(x = bank_marketing_train_job_retired$marital, type="histogram", color = bank_marketing_train_job_retired$y)
+plot_ly(x = bank_marketing_train_job_retired$marital, type="box", color = bank_marketing_train_job_retired$y)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$marital)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$marital)/num_retired_no
+# => yesはsingleが少ない
+
+# クレジットの支払遅延
+plot_ly(x = bank_marketing_train_job_retired$default, type="histogram", color = bank_marketing_train_job_retired$y)
+plot_ly(x = bank_marketing_train_job_retired$default, type="box", color = bank_marketing_train_job_retired$y)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$default)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$default)/num_retired_no
+# => yesはunknownが少なく、9割が"no"
+
+# 最終学歴
+#plot_ly(x = bank_marketing_train_job_retired$education, type="histogram", color = bank_marketing_train_job_retired$y)
+#plot_ly(x = bank_marketing_train_job_retired$education, type="box", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$education, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$education, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$education)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$education)/num_retired_no
+# => yesはbasic.4y, illiterate(学歴が高くない)が多い 
+
+# 不動産ローンの有無
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$housing, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$housing, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$housing)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$housing)/num_retired_no
+# => 大きな差はない（yesは少しローン有が多い）
+
+# 個人ローンの有無
+plot_ly(x = bank_marketing_train_job_retired$loan, type="histogram", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$loan, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$loan, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$loan)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$loan)/num_retired_no
+# => 差はなさそう
+
+# 連絡デバイス
+plot_ly(x = bank_marketing_train_job_retired$contact, type="histogram", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$contact, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$contact, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$contact)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$contact)/num_retired_no
+# => yesはcellularが多い
+
+# 前回の接触からの経過日数
+#plot_ly(x = bank_marketing_train_job_retired$pdays, type="histogram", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$pdays, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$pdays, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$pdays)
+summary(bank_marketing_train_job_retired_n$pdays)
+bank_marketing_train_job_retired_y
+# => yesは日数が短い人の割合が大きい
+
+# 以前のキャンペーン結果
+#plot_ly(x = bank_marketing_train_job_retired$poutcome, type="histogram", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$poutcome, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$poutcome, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$poutcome)/num_retired_yes
+summary(bank_marketing_train_job_retired_n$poutcome)/num_retired_no
+# => yesはfailure, successが多い
+
+# 以前のキャンペーンの接触回数
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$previous, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$previous, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 割合をみてみる
+summary(bank_marketing_train_job_retired_y$previous)
+summary(bank_marketing_train_job_retired_n$previous)
+# => yesは平均値が大きい(yes:0.65, no:0.20)しかし、この説明変数がどれだけ有効なのかは想像つかない
+
+```
+
+
+# 最終的なペルソナ
+- age:60以上
+- job:retired
+- marital：結婚経験あり
+- default(クレジットの支払い遅延)：なし
+- education(最終学歴)：basic.4y
+- contact(連絡デバイス)：cellular
+- pdays（前回の接触からの経過日数）：少ない
+- poutcome（以前のキャンペーン結果）：あり（初めての客でない）
+
+# 2.予測モデルを用いたアタックリストを作成する
+
+### 人に依存しない説明変数も含め、すべての変数に対して統計値を確認しておく
+### ただしday_of_week, duration, campaignは架電後の説明変数と考え、除去する
+```{r}
+lr3<-glm(y~.-day_of_week-duration-campaign,
+        data=bank_marketing_train, family="binomial")
+
+summary(lr3)
+
+## step関数
+lr4 <- step(lr3)
+AIC(lr4)
+summary(lr4)
+
+```
+
+### ここで、ageなどの説明変数の重要性が減ってしまうのは、
+### emp.var.rateなどの説明変数の影響が大きいためと思われる
+### ペルソナを定義するのに使用した説明変数と、それ以外で重要な説明変数を用いて
+### モデリングをおこなう方針とする
+### (emp.var.rate, cons.price.idx, cons.conf.idx を追加する)
+
+### 続きはPythonで行う
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
