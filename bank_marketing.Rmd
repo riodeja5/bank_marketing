@@ -47,13 +47,16 @@ subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$job)/num_yes
 summary(bank_marketing_train_n$job)/num_no
-# => yesの方が、retired/studentが多く、blue-colorが少ない。特にretiredは3倍違いがでている
+# => yesの方が、retired/studentが多く、blue-colorが少ない。特にstudentは約4倍、retiredは約3倍違いがでている
 
 # 最終学歴(education)
 pl_yes <- plot_ly(x = bank_marketing_train_y$education, type="histogram", name = "yes")
 pl_no <- plot_ly(x = bank_marketing_train_n$education, type="histogram", name = "no")
 subplot(pl_yes, pl_no)
-# => yesはuniversity.degreeが多い
+# 割合をみてみる
+summary(bank_marketing_train_y$education)/num_yes
+summary(bank_marketing_train_n$education)/num_no
+# => yesはilliterateが多い
 
 # 連絡デバイス(contact)
 pl_yes <- plot_ly(x = bank_marketing_train_y$contact, type="histogram", name = "yes")
@@ -67,7 +70,9 @@ pl_no <- plot_ly(x = bank_marketing_train_n$poutcome, type="histogram", name = "
 subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$poutcome)/num_yes
-summary(bank_marketing_train_n$poutcome)/num_no# => yesはsuccessが多い(全体の割合としては2割だが、noは0.1割くらいなのでyesとnoの差はある)
+summary(bank_marketing_train_n$poutcome)/num_no
+
+# => yesはsuccessが多い
 
 # 以前のキャンペーンの接触回数(previous)
 pl_yes <- plot_ly(x = bank_marketing_train_y$previous, type="histogram", name = "yes")
@@ -79,7 +84,19 @@ summary(bank_marketing_train_n$previous)
 
 ```
 
-#
+### 定性的な仮説
+-年齢：入社後の22歳ごろと退職後の60歳ごろはyesが増えそう→60歳は合っている
+-職業：student、unemployedはyesが少なそう→外れている。studentは逆。
+-婚姻状況：divorced（離婚）はyesが少なそう→外れ。傾向なし
+-クレジットの支払遅延：無しはyesが多そう→外れ。傾向なし
+-最終学歴：調べられなかった
+-不動産ローンの有無：無しはyesが多そう→外れ。傾向なし
+-個人ローンの有無：無しはyesが多そう→外れ。傾向なし
+-連絡デバイス：関係なさそう→外れ。yesはcellularが多い
+-前回の接触からの経過日数：短い方がyesが多そう（担当者を覚えている）→外れ。傾向なし
+-以前のキャンペーン結果：successがyesが多そう（継続してくれるのでは）→当たり
+-以前のキャンペーンの接触回数：数が多い方がyesが多そう（担当者を覚えている）→当たり
+
 
 ### ロジスティック回帰で各説明変数を見る
 
@@ -246,12 +263,13 @@ summary(lr4)
 
 ```
 
-### ここで、ageなどの説明変数の重要性が減ってしまうのは、
-### emp.var.rateなどの説明変数の影響が大きいためと思われる
-### ペルソナを定義するのに使用した説明変数と、それ以外で重要な説明変数を用いて
-### モデリングをおこなう方針とする
-### (emp.var.rate, cons.price.idx, cons.conf.idx を追加する)
+### 考察
+ここで、ageなどの説明変数の重要性が減ってしまうのは、
+emp.var.rateなどの説明変数の影響が大きいためと思われる
+ペルソナを定義するのに使用した説明変数と、それ以外で重要な説明変数を用いて
+モデリングをおこなう方針とする
+(emp.var.rate, cons.price.idx, cons.conf.idx を追加する)
 
-### 続きはPythonで行う
+### 続きはPytnで行う
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
