@@ -6,6 +6,7 @@
 library("psych")
 library("skimr")
 library("plotly")
+library(foreach)
 
 # 出力したCSVデータを読み込めます
 bank_marketing_train <- read.csv("bank_marketing_train.csv")
@@ -29,21 +30,34 @@ num_no = dim(bank_marketing_train_n)[1]
 # ヒストグラム
 
 # 年齢
-plot_ly(x = bank_marketing_train_y$age, type="histogram")
-plot_ly(x = bank_marketing_train_n$age, type="histogram")
-plot_ly(x = bank_marketing_train$age, type="box", color = bank_marketing_train$y)
-# => yesの方が、60以上が多い
+pl_yes <- plot_ly(x = bank_marketing_train_y$age, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$age, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+# 5歳区分の割合をみてみる
+#f <- cut(bank_marketing_train_y, breaks=c(20, 30, 40, 50, 60))
+age_unit <- 5
+for (i in 1:22) {
+  rank_num <- dim(bank_marketing_train_y[age_unit*i-age_unit <= bank_marketing_train_y$age & bank_marketing_train_y$age < age_unit*i,])[1]
+  result <- paste(age_unit*i-age_unit, "~", i*age_unit, ":",rank_num, rank_num/num_yes)
+  print(result)
+}
+for (i in 1:22) {
+  rank_num <- dim(bank_marketing_train_n[age_unit*i-age_unit <= bank_marketing_train_n$age & bank_marketing_train_n$age < age_unit*i,])[1]
+  result <- paste(age_unit*i-age_unit, "~", i*age_unit, ":",rank_num, rank_num/num_no)
+  print(result)
+}
+
+# => yesの方が、30歳未満、60歳以上が多い
 
 # 職業
-#pl_job = plot_ly(x = bank_marketing_train_y$job, type="histogram")
-#plot_ly(x = bank_marketing_train_n$job, type="histogram")
-# add_trace(p = pl_job, x = bank_marketing_train_n$job, type="histogram")
-plot_ly(x = bank_marketing_train$job, type="box", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$job, type="histogram", color = bank_marketing_train$y)
+# 職業(job)
+pl_yes <- plot_ly(x = bank_marketing_train_y$job, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$job, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$job)/num_yes
 summary(bank_marketing_train_n$job)/num_no
-# => yesの方が、retired/studentが多く、blue-colorが少ない
+# => yesの方が、retired/studentが多く、blue-colorが少ない。特にstudentは約4倍、retiredは約3倍違いがでている
 
 # 婚姻状況
 plot_ly(x = bank_marketing_train$marital, type="histogram", color = bank_marketing_train$y)
@@ -57,13 +71,14 @@ skimr::skim(bank_marketing_train_y$default)
 skimr::skim(bank_marketing_train_n$default)
 # => 差はなさそう
 
-# 最終学歴
-plot_ly(x = bank_marketing_train$education, type="histogram", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$education, type="box", color = bank_marketing_train$y)
+# 最終学歴(education)
+pl_yes <- plot_ly(x = bank_marketing_train_y$education, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$education, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$education)/num_yes
 summary(bank_marketing_train_n$education)/num_no
-# => yesはuniversity.degreeが多い
+# => yesはilliterateが多い
 
 # 不動産ローンの有無
 plot_ly(x = bank_marketing_train$housing, type="histogram", color = bank_marketing_train$y)
@@ -81,64 +96,109 @@ summary(bank_marketing_train_y$loan)/num_yes
 summary(bank_marketing_train_n$loan)/num_no
 # => 差はなさそう
 
-# 連絡デバイス
-plot_ly(x = bank_marketing_train$contact, type="histogram", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$contact, type="box", color = bank_marketing_train$y)
-# 割合をみてみる
-summary(bank_marketing_train_y$contact)/num_yes
-summary(bank_marketing_train_n$contact)/num_no
+# 連絡デバイス(contact)
+pl_yes <- plot_ly(x = bank_marketing_train_y$contact, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$contact, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # => yesはcellularが多い
 
 # 前回の接触からの経過日数
-plot_ly(x = bank_marketing_train$pdays, type="histogram", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$pdays, type="box", color = bank_marketing_train$y)
+pl_yes <- plot_ly(x = bank_marketing_train_y$pdays, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$pdays, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$pdays)
 summary(bank_marketing_train_n$pdays)
-# => 差はなさそう
+# yes/noともに999(以前に連絡されなかった)が多数のため、削除して調べなおす
+pl_yes <- plot_ly(x = bank_marketing_train_y[bank_marketing_train_y$pdays != 999,]$pdays, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n[bank_marketing_train_n$pdays != 999,]$pdays, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+summary(bank_marketing_train_y[bank_marketing_train_y$pdays != 999,]$pdays)
+summary(bank_marketing_train_n[bank_marketing_train_n$pdays != 999,]$pdays)
+# => yesの方が、回数は少ない
 
-# 以前のキャンペーン結果
-plot_ly(x = bank_marketing_train$poutcome, type="histogram", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$poutcome, type="box", color = bank_marketing_train$y)
+# 999の割合はどうか
+dim(bank_marketing_train_y[bank_marketing_train_y$pdays == 999,])[1] / num_yes
+dim(bank_marketing_train_y[bank_marketing_train_y$pdays != 999,])[1] / num_yes
+dim(bank_marketing_train_n[bank_marketing_train_n$pdays == 999,])[1] / num_no
+dim(bank_marketing_train_n[bank_marketing_train_n$pdays != 999,])[1] / num_no
+# => yesの方が、以前に連絡されなかった割合が小さい
+# 999以外で、10回ごとの割合をみてみる
+pdays_unit <- 10
+num_pdays_contact_y <- dim(bank_marketing_train_y[bank_marketing_train_y$pdays != 999,])[1]
+num_pdays_contact_n <- dim(bank_marketing_train_n[bank_marketing_train_n$pdays != 999,])[1]
+num_pdays_contact_y
+num_pdays_contact_n
+for (i in 1:5) {
+  rank_num <- dim(bank_marketing_train_y[pdays_unit*i-pdays_unit <= bank_marketing_train_y$pdays & bank_marketing_train_y$pdays < pdays_unit*i,])[1]
+  result <- paste(pdays_unit*i-pdays_unit, "~", i*pdays_unit, ":",rank_num, rank_num/num_pdays_contact_y)
+  print(result)
+}
+for (i in 1:5) {
+  rank_num <- dim(bank_marketing_train_n[pdays_unit*i-pdays_unit <= bank_marketing_train_n$pdays & bank_marketing_train_n$pdays < pdays_unit*i,])[1]
+  result <- paste(pdays_unit*i-pdays_unit, "~", i*pdays_unit, ":",rank_num, rank_num/num_pdays_contact_n)
+  print(result)
+}
+# => 999以外はそこまで差がなさそうなので、999とそれ以外で分けた方がよさそう
+
+# 以前のキャンペーン結果(campaign)
+pl_yes <- plot_ly(x = bank_marketing_train_y$poutcome, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$poutcome, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_y$poutcome)/num_yes
 summary(bank_marketing_train_n$poutcome)/num_no
-# => yesはsuccessが多い(全体の割合としては2割だが、noは0.1割くらいなのでyesとnoの差はある)
+# => yesはsuccessが多い
 
-# 以前のキャンペーンの接触回数
-plot_ly(x = bank_marketing_train$previous, type="histogram", color = bank_marketing_train$y)
-plot_ly(x = bank_marketing_train$previous, type="box", color = bank_marketing_train$y)
+# 以前のキャンペーンの接触回数(previous)
+pl_yes <- plot_ly(x = bank_marketing_train_y$previous, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$previous, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
-cut(bank_marketing_train_y$previous, breaks = c(0,1,2,3,4,5,6))
 summary(bank_marketing_train_y$previous)
 summary(bank_marketing_train_n$previous)
-# => yesは平均値が大きい(yes:0.48, no:0.13)しかし、この説明変数がどれだけ有効なのかは想像つかない
+# => yesは平均値が大きい(yes:0.48, no:0.13)
 
 # 定性的な仮説
-# -年齢：入社後の22歳ごろと退職後の60歳ごろはyesが増えそう→60歳は合っている
-# -職業：student、unemployedはyesが少なそう→外れている。studentは逆。
+# -年齢：入社後の22歳ごろと退職後の60歳ごろはyesが増えそう→当たっている。30歳未満、60歳以上が多い。
+# -職業：student、unemployedはyesが少なそう→外れている。studentは多い。
 # -婚姻状況：divorced（離婚）はyesが少なそう→外れ。傾向なし
 # -クレジットの支払遅延：無しはyesが多そう→外れ。傾向なし
 # -最終学歴：調べられなかった
 # -不動産ローンの有無：無しはyesが多そう→外れ。傾向なし
 # -個人ローンの有無：無しはyesが多そう→外れ。傾向なし
 # -連絡デバイス：関係なさそう→外れ。yesはcellularが多い
-# -前回の接触からの経過日数：短い方がyesが多そう（担当者を覚えている）→外れ。傾向なし
+# -前回の接触からの経過日数：短い方がyesが多そう（担当者を覚えている）→外れ。以前に連絡があった方がyesが多い
 # -以前のキャンペーン結果：successがyesが多そう（継続してくれるのでは）→当たり
 # -以前のキャンペーンの接触回数：数が多い方がyesが多そう（担当者を覚えている）→当たり
 
 
 # ロジスティック回帰で各説明変数を見る
 
-#学習データとテストデータに分割しておく（あとで予測のデモのため）
-#train_idx<-sample(c(1:dim(bank_marketing_train)[1]), size = dim(bank_marketing_train)[1]*0.7)
-#train<-bank_marketing_train[train_idx, ]
-#test<-bank_marketing_train[-train_idx, ]
+# ageを、30未満、30-60、60以上にカテゴリ化する
+bank_marketing_train$age <- cut(bank_marketing_train$age, 
+    breaks = c(0,30,60,110), labels= c("0-30","30-60","60-110"),
+    right=FALSE, ordered_result=TRUE)
 
-## ロジスティック回帰
-## 一般化線形モデルなのでGeneral Legression Model(glm)
+# pdaysを、999かそれ以外かでカテゴリ化する
+bank_marketing_train$pre_contact <- cut(bank_marketing_train$pdays, 
+                                breaks = c(0,999,1000), labels= c("yes","no"),
+                                right=FALSE, ordered_result=TRUE)
+
+# カテゴリ化した新たな説明変数をplotしてみる
+bank_marketing_train_y <- bank_marketing_train[bank_marketing_train$y=="yes",]
+bank_marketing_train_n <- bank_marketing_train[bank_marketing_train$y=="no",]
+
+pl_yes <- plot_ly(x = bank_marketing_train_y$age, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$age, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+
+pl_yes <- plot_ly(x = bank_marketing_train_y$pre_contact, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_n$pre_contact, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
+
 lr<-glm(y~age+job+marital+default+education+housing+
-          loan+contact+day_of_week+pdays+poutcome+previous,
+          loan+contact+day_of_week+pre_contact+poutcome+previous,
         data=bank_marketing_train, family="binomial")
 
 ## 線形回帰と同じようにsummaryで各種統計値が見れます。
@@ -165,37 +225,36 @@ summary(bank_marketing_train_job_retired_y)
 summary(bank_marketing_train_job_retired_n)
 
 # データ数
-num_retired_yes = 358
-num_retired_no = 1074
+num_retired_yes = dim(bank_marketing_train_job_retired_y)[1]
+num_retired_no = dim(bank_marketing_train_job_retired_n)[1]
 
 # ヒストグラム
 
 # 年齢
-plot_ly(x = bank_marketing_train_job_retired_y$age, type="histogram")
-plot_ly(x = bank_marketing_train_job_retired_n$age, type="histogram")
-plot_ly(x = bank_marketing_train_job_retired$age, type="histogram", color = bank_marketing_train_job_retired$y)
-plot_ly(x = bank_marketing_train_job_retired$age, type="box", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$age, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$age, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # => yesの方が、60以上が多い
 
 # 婚姻状況
-plot_ly(x = bank_marketing_train_job_retired$marital, type="histogram", color = bank_marketing_train_job_retired$y)
-plot_ly(x = bank_marketing_train_job_retired$marital, type="box", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$marital, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$marital, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_job_retired_y$marital)/num_retired_yes
 summary(bank_marketing_train_job_retired_n$marital)/num_retired_no
 # => yesはsingleが少ない
 
 # クレジットの支払遅延
-plot_ly(x = bank_marketing_train_job_retired$default, type="histogram", color = bank_marketing_train_job_retired$y)
-plot_ly(x = bank_marketing_train_job_retired$default, type="box", color = bank_marketing_train_job_retired$y)
+pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$default, type="histogram", name = "yes")
+pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$default, type="histogram", name = "no")
+subplot(pl_yes, pl_no)
 # 割合をみてみる
 summary(bank_marketing_train_job_retired_y$default)/num_retired_yes
 summary(bank_marketing_train_job_retired_n$default)/num_retired_no
 # => yesはunknownが少なく、9割が"no"
 
 # 最終学歴
-#plot_ly(x = bank_marketing_train_job_retired$education, type="histogram", color = bank_marketing_train_job_retired$y)
-#plot_ly(x = bank_marketing_train_job_retired$education, type="box", color = bank_marketing_train_job_retired$y)
 pl_yes <- plot_ly(x = bank_marketing_train_job_retired_y$education, type="histogram", name = "yes")
 pl_no <- plot_ly(x = bank_marketing_train_job_retired_n$education, type="histogram", name = "no")
 subplot(pl_yes, pl_no)
@@ -284,7 +343,7 @@ summary(bank_marketing_train_job_retired_n$previous)
 skimr::skim(bank_marketing_train)
 
 
-lr3<-glm(y~.-day_of_week-duration-campaign,
+lr3<-glm(y~.-day_of_week-duration-campaign-pdays,
         data=bank_marketing_train, family="binomial")
 
 summary(lr3)
@@ -303,4 +362,6 @@ summary(lr4)
 # (emp.var.rate, cons.price.idx, cons.conf.idx を追加する)
 
 # 続きはPythonで行う
+# データをCSV出力
+write.csv(bank_marketing_train, "bank_marketing_train_R.csv", row.names = FALSE, quote = FALSE)
 
